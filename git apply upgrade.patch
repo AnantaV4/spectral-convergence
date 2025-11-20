@@ -1,0 +1,224 @@
+*** Begin Patch
+*** Add File: requirements.txt
++numpy
++scipy
++matplotlib
++tqdm
++pytest
++
+*** End Patch
+*** Begin Patch
+*** Add File: spectral_convergence/__init__.py
++"""
++spectral_convergence package
++Lightweight entry points for the spectral-convergence toolkit.
++"""
++from .convergence import run_operator
++from .operators import SpectralOperator
++from .plotting import plot_convergence
++
++__all__ = ["run_operator", "SpectralOperator", "plot_convergence"]
++
+*** End Patch
+*** Begin Patch
+*** Add File: spectral_convergence/operators.py
++"""
++operators.py
++Contains a lightweight SpectralOperator class.
++Replace the placeholder logic with your repository's real operator code.
++"""
++import numpy as np
++
++class SpectralOperator:
++    """
++    Prototype spectral operator class.
++
++    Parameters
++    ----------
++    dim : int
++        Dimensionality of the operator / state vector.
++    scale : float
++        Optional scaling factor for the operator.
++    """
++    def __init__(self, dim: int = 144000, scale: float = 1.0):
++        self.dim = int(dim)
++        self.scale = float(scale)
++
++    def init_state(self, seed: int | None = None):
++        """Return an initial state vector suitable for the operator."""
++        rng = np.random.default_rng(seed)
++        return rng.standard_normal(self.dim)
++
++    def step(self, x: np.ndarray) -> np.ndarray:
++        """
++        Single operator update.
++        This is a placeholder — replace with your real operator implementation.
++        """
++        if x.shape[0] != self.dim:
++            raise ValueError(f"Input length {x.shape[0]} does not match dim {self.dim}")
++
++        # Placeholder dynamics: gentle nonlinear map + small noise
++        # Replace with your spectral operator calculations.
++        y = np.sin(x) * 0.99 + 0.01 * np.tanh(x * 0.1)
++        noise = np.random.default_rng().normal(scale=1e-4, size=self.dim)
++        return self.scale * (y + noise)
++
+*** End Patch
+*** Begin Patch
+*** Add File: spectral_convergence/convergence.py
++"""
++convergence.py
++Run spectral operator iterations and collect simple diagnostics.
++"""
++from tqdm import tqdm
++import numpy as np
++from .operators import SpectralOperator
++
++def run_operator(dim: int = 10000, steps: int = 200, seed: int | None = None, scale: float = 1.0):
++    """
++    Run a simple spectral operator iteration and return a history vector.
++
++    Parameters
++    ----------
++    dim : int
++        Dimension of the operator / state vector. (Reduced default for demo.)
++    steps : int
++        Number of iterations to run.
++    seed : int or None
++        RNG seed for reproducibility.
++    scale : float
++        Scaling factor passed to the operator.
++
++    Returns
++    -------
++    history : np.ndarray
++        Array with length `steps` containing a simple diagnostic (mean absolute value).
++    """
++    op = SpectralOperator(dim=dim, scale=scale)
++    x = op.init_state(seed=seed)
++    history = np.zeros(steps, dtype=float)
++
++    for i in tqdm(range(steps), desc="running operator", leave=False):
++        x = op.step(x)
++        # A simple diagnostic: mean absolute amplitude
++        history[i] = float(np.mean(np.abs(x)))
++
++    return history
++
+*** End Patch
+*** Begin Patch
+*** Add File: spectral_convergence/plotting.py
++"""
++plotting.py
++Simple plotting helpers for spectral-convergence results.
++"""
++import matplotlib.pyplot as plt
++import numpy as np
++import os
++
++def plot_convergence(history: np.ndarray, save: bool = True, path: str = "img/convergence_plot.png", show: bool = True):
++    """
++    Plot and optionally save a convergence trace.
++
++    Parameters
++    ----------
++    history : np.ndarray
++        1D array of diagnostics (e.g., mean absolute value per iteration).
++    save : bool
++        If True, save the figure to `path`.
++    path : str
++        File path to save the figure (PNG).
++    show : bool
++        If True, call plt.show() to display the figure.
++    """
++    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
++
++    plt.figure(figsize=(8, 4.5))
++    plt.plot(history, linewidth=1)
++    plt.grid(alpha=0.25)
++    plt.xlabel("Iteration")
++    plt.ylabel("Mean |state|")
++    plt.title("Spectral Operator Convergence (diagnostic)")
++    plt.tight_layout()
++
++    if save:
++        plt.savefig(path, dpi=300)
++
++    if show:
++        plt.show()
++    else:
++        plt.close()
++
++def save_history(history: np.ndarray, path: str = "img/history.npy"):
++    """Save numeric history to a .npy file."""
++    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
++    np.save(path, history)
++
+*** End Patch
+*** Begin Patch
+*** Add File: notebooks/demo.ipynb
++{
++ "cells": [
++  {
++   "cell_type": "markdown",
++   "metadata": {},
++   "source": [
++    "# Spectral Convergence — Demo\n",
++    "\n",
++    "This minimal notebook demonstrates the package `spectral_convergence`.\n",
++    "It runs a short operator experiment (reduced dimension for demo) and plots the convergence trace.\n"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "execution_count": null,
++   "metadata": {},
++   "outputs": [],
++   "source": [
++    "from spectral_convergence import run_operator, plot_convergence\n",
++    "import numpy as np\n",
++    "\n",
++    "# Reduced defaults for demo so it runs quickly in a notebook environment\n",
++    "history = run_operator(dim=2000, steps=120, seed=42)\n",
++    "\n",
++    "plot_convergence(history, save=True, path=\"img/demo_convergence.png\")\n",
++    "print(\"Saved: img/demo_convergence.png\")\n"
++   ]
++  }
++ ],
++ "metadata": {
++  "kernelspec": {
++   "display_name": "Python 3",
++   "language": "python",
++   "name": "python3"
++  },
++  "language_info": {
++   "name": "python",
++   "version": "3.10"
++  }
++ },
++ "nbformat": 4,
++ "nbformat_minor": 5
++}
++
+*** End Patch
+*** Begin Patch
+*** Add File: tests/test_convergence.py
++import numpy as np
++from spectral_convergence import run_operator
++
++def test_run_operator_basic():
++    # quick smoke test with small dimension and few steps
++    history = run_operator(dim=500, steps=5, seed=123)
++    assert isinstance(history, np.ndarray)
++    assert history.shape == (5,)
++    assert np.all(np.isfinite(history))
++    assert np.all(history >= 0)
++
+*** End Patch
+*** Begin Patch
+*** Add File: img/.gitkeep
++#
++# Keep the img folder in the repo (placeholder file)
++#
+*** End Patch
